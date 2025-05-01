@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { Participant } from './data';
 import { redirect } from 'next/navigation';
-import { auth } from './auth';
 import { put, list, del } from "@vercel/blob";
 
 // Zod schema for validation
@@ -31,12 +30,6 @@ const RunTimeSchema = z.object({
     }, { message: "Invalid time format (use MM:SS or seconds)" }).nullable(),
 });
 
-async function checkAuth() {
-    const session = await auth();
-    if (!session?.user) {
-        throw new Error('Unauthorized');
-    }
-}
 
 export async function getParticipantsWithSort(): Promise<Participant[]> {
     const { blobs } = await list({ prefix: "participants/" })
@@ -57,7 +50,6 @@ export async function getParticipantsWithSort(): Promise<Participant[]> {
 }
 
 export async function handleAddParticipant(formData: FormData) {
-    await checkAuth();
     const name = formData.get("name") as string
     const gender = formData.get("gender") as "male" | "female" | "other"
     const bibNumber = formData.get("bibNumber") as string
@@ -97,7 +89,6 @@ export async function handleAddParticipant(formData: FormData) {
 }
 
 export async function handleUpdateParticipant(id: string, formData: FormData) {
-    await checkAuth();
     const name = formData.get("name") as string
     const gender = formData.get("gender") as "male" | "female" | "other"
     const bibNumber = formData.get("bibNumber") as string
@@ -127,6 +118,7 @@ export async function handleUpdateParticipant(id: string, formData: FormData) {
 
     await put(`participants/${id}.json`, JSON.stringify(participant), {
         access: "public",
+        allowOverwrite: true
     })
 
     revalidatePath('/admin');
@@ -137,7 +129,6 @@ export async function handleUpdateParticipant(id: string, formData: FormData) {
 }
 
 export async function handleDeleteParticipant(id: string) {
-    await checkAuth();
     await del(`participants/${id}.json`)
     revalidatePath('/admin');
     revalidatePath('/startlist');
@@ -146,7 +137,6 @@ export async function handleDeleteParticipant(id: string) {
 }
 
 export async function handleUpdateBench(prevState: any, formData: FormData) {
-    await checkAuth();
     const id = formData.get('id') as string;
     const benchKg = formData.get('benchKg') ? Number(formData.get('benchKg')) : null;
 
@@ -162,7 +152,6 @@ export async function handleUpdateBench(prevState: any, formData: FormData) {
 }
 
 export async function handleUpdateRunTime(prevState: any, formData: FormData) {
-    await checkAuth();
     const id = formData.get('id') as string;
     const runTimeSeconds = formData.get('runTimeSeconds') ? Number(formData.get('runTimeSeconds')) : null;
 
