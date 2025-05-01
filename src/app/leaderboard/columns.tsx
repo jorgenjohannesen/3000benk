@@ -2,19 +2,23 @@ import { ColumnDef } from "@tanstack/react-table"
 import { Participant } from "@/lib/data"
 import { formatTime } from "@/lib/utils"
 
-export function createColumns(): ColumnDef<Participant>[] {
+export function createColumns(): ColumnDef<Participant & { score: number }>[] {
   return [
     {
       accessorKey: "name",
-      header: "Name",
+      header: "Navn",
     },
     {
       accessorKey: "gender",
-      header: "Gender",
+      header: "Kjønn",
+      cell: ({ row }) => {
+        const gender = row.getValue("gender") as string;
+        return gender === "male" ? "Mann" : gender === "female" ? "Kvinne" : "Annet";
+      },
     },
     {
       accessorKey: "benchKg",
-      header: "Bench Press (kg)",
+      header: "Benkpress (kg)",
       cell: ({ row }) => {
         const benchKg = row.getValue("benchKg") as number;
         return benchKg ? `${benchKg} kg` : "-";
@@ -22,23 +26,18 @@ export function createColumns(): ColumnDef<Participant>[] {
     },
     {
       accessorKey: "runTimeSeconds",
-      header: "Run Time",
+      header: "Løpetid",
       cell: ({ row }) => {
         const runTimeSeconds = row.getValue("runTimeSeconds") as number;
         return runTimeSeconds ? formatTime(runTimeSeconds) : "-";
       },
     },
     {
-      id: "score",
-      header: "Score",
+      accessorKey: "score",
+      header: "Poeng",
       cell: ({ row }) => {
-        const benchKg = row.getValue("benchKg") as number;
-        const runTimeSeconds = row.getValue("runTimeSeconds") as number;
-        
-        if (!benchKg || !runTimeSeconds) return "-";
-        
-        const score = runTimeSeconds - (benchKg * 3);
-        return formatTime(score);
+        const score = row.getValue("score") as number;
+        return score ? score.toFixed(2) : "-";
       },
     },
   ]

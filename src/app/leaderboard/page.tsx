@@ -16,7 +16,7 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [genderFilter, setGenderFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField>('score');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     async function loadParticipants() {
@@ -24,7 +24,7 @@ export default function LeaderboardPage() {
         const data = await getParticipantsWithSort();
         setParticipants(data);
       } catch (error) {
-        console.error('Failed to load participants:', error);
+        console.error('Kunne ikke laste deltakere:', error);
       } finally {
         setLoading(false);
       }
@@ -38,24 +38,25 @@ export default function LeaderboardPage() {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection('desc');
     }
   };
 
   const calculateScore = (participant: Participant) => {
-    if (!participant.benchKg || !participant.runTimeSeconds) return Infinity;
-    return participant.runTimeSeconds - (participant.benchKg * 3);
+    if (!participant.benchKg || !participant.runTimeSeconds) return 0;
+    return participant.benchKg * 1000 / participant.runTimeSeconds;
   };
 
   const filteredAndSortedParticipants = participants
     .filter(participant => genderFilter === 'all' || participant.gender === genderFilter)
+    .map(participant => ({
+      ...participant,
+      score: calculateScore(participant)
+    }))
     .sort((a, b) => {
       if (sortField === 'score') {
-        const scoreA = calculateScore(a);
-        const scoreB = calculateScore(b);
-        return sortDirection === 'asc' ? scoreA - scoreB : scoreB - scoreA;
+        return sortDirection === 'asc' ? a.score - b.score : b.score - a.score;
       }
-
       const aValue = a[sortField];
       const bValue = b[sortField];
       
@@ -76,24 +77,26 @@ export default function LeaderboardPage() {
   const columns = createColumns();
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <div>Laster...</div>;
   }
 
   return (
     <div className="container mx-auto py-10">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Leaderboard</h1>
-        <Select value={genderFilter} onValueChange={setGenderFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by gender" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Genders</SelectItem>
-            <SelectItem value="male">Male</SelectItem>
-            <SelectItem value="female">Female</SelectItem>
-            <SelectItem value="other">Other</SelectItem>
-          </SelectContent>
-        </Select>
+        <h1 className="text-2xl font-bold">Resultatliste</h1>
+        <div className="flex gap-4">
+          <Select value={genderFilter} onValueChange={setGenderFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filtrer på kjønn" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle kjønn</SelectItem>
+              <SelectItem value="male">Menn</SelectItem>
+              <SelectItem value="female">Kvinner</SelectItem>
+              <SelectItem value="other">Annet</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="mb-4">
@@ -103,28 +106,28 @@ export default function LeaderboardPage() {
             onClick={() => handleSort('name')}
             className={sortField === 'name' ? 'bg-gray-100' : ''}
           >
-            Name {sortField === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
+            Navn {sortField === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
           </Button>
           <Button 
             variant="outline" 
             onClick={() => handleSort('benchKg')}
             className={sortField === 'benchKg' ? 'bg-gray-100' : ''}
           >
-            Bench Press {sortField === 'benchKg' && (sortDirection === 'asc' ? '↑' : '↓')}
+            Benkpress {sortField === 'benchKg' && (sortDirection === 'asc' ? '↑' : '↓')}
           </Button>
           <Button 
             variant="outline" 
             onClick={() => handleSort('runTimeSeconds')}
             className={sortField === 'runTimeSeconds' ? 'bg-gray-100' : ''}
           >
-            Run Time {sortField === 'runTimeSeconds' && (sortDirection === 'asc' ? '↑' : '↓')}
+            Løpetid {sortField === 'runTimeSeconds' && (sortDirection === 'asc' ? '↑' : '↓')}
           </Button>
           <Button 
             variant="outline" 
             onClick={() => handleSort('score')}
             className={sortField === 'score' ? 'bg-gray-100' : ''}
           >
-            Score {sortField === 'score' && (sortDirection === 'asc' ? '↑' : '↓')}
+            Poeng {sortField === 'score' && (sortDirection === 'asc' ? '↑' : '↓')}
           </Button>
         </div>
       </div>

@@ -1,71 +1,74 @@
 "use client"
 
-import { type ColumnDef } from "@tanstack/react-table"
+import { ColumnDef } from "@tanstack/react-table"
 import { Participant } from "@/lib/data"
-import { formatTime } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Pencil, Trash2 } from "lucide-react"
+import { formatTime } from "@/lib/utils"
 
-interface ColumnsProps {
-  setSelectedParticipant: (participant: Participant) => void
-  setIsEditDialogOpen: (open: boolean) => void
-  handleDelete: (id: string) => void
-}
-
-export const createColumns = ({ setSelectedParticipant, setIsEditDialogOpen, handleDelete }: ColumnsProps): ColumnDef<Participant>[] => [
-  {
-    accessorKey: "name",
-    header: "Name",
-  },
-  {
-    accessorKey: "gender",
-    header: "Gender",
-  },
-  {
-    accessorKey: "bibNumber",
-    header: "Bib Number",
-  },
-  {
-    accessorKey: "benchKg",
-    header: "Bench Press (kg)",
-    cell: ({ row }) => {
-      const benchKg = row.getValue("benchKg")
-      return benchKg ? `${benchKg} kg` : "-"
+export function createColumns(
+  handleDelete: (id: string) => Promise<void>,
+  setEditingParticipant: (participant: Participant | null) => void
+): ColumnDef<Participant>[] {
+  return [
+    {
+      accessorKey: "name",
+      header: "Navn",
     },
-  },
-  {
-    accessorKey: "runTimeSeconds",
-    header: "Run Time",
-    cell: ({ row }) => {
-      const runTimeSeconds = row.getValue("runTimeSeconds")
-      return runTimeSeconds ? formatTime(runTimeSeconds as number) : "-"
+    {
+      accessorKey: "gender",
+      header: "Kjønn",
+      cell: ({ row }) => {
+        const gender = row.getValue("gender") as string;
+        return gender === "male" ? "Mann" : gender === "female" ? "Kvinne" : "Annet";
+      },
     },
-  },
-  {
-    id: "actions",
-    cell: ({ row }) => {
-      const participant = row.original
-      return (
-        <div className="flex space-x-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              setSelectedParticipant(participant)
-              setIsEditDialogOpen(true)
-            }}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => handleDelete(participant.id)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      )
+    {
+      accessorKey: "benchKg",
+      header: "Benkpress (kg)",
+      cell: ({ row }) => {
+        const benchKg = row.getValue("benchKg") as number;
+        return benchKg ? `${benchKg} kg` : "-";
+      },
     },
-  },
-] 
+    {
+      accessorKey: "runTimeSeconds",
+      header: "Løpetid",
+      cell: ({ row }) => {
+        const runTimeSeconds = row.getValue("runTimeSeconds") as number;
+        return runTimeSeconds ? formatTime(runTimeSeconds) : "-";
+      },
+    },
+    {
+      accessorKey: "bibNumber",
+      header: "Startnummer",
+      cell: ({ row }) => {
+        const bibNumber = row.getValue("bibNumber") as number;
+        return bibNumber || "-";
+      },
+    },
+    {
+      id: "actions",
+      cell: ({ row }) => {
+        const participant = row.original;
+        return (
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditingParticipant(participant)}
+            >
+              Rediger
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => handleDelete(participant.id)}
+            >
+              Slett
+            </Button>
+          </div>
+        );
+      },
+    },
+  ];
+} 
