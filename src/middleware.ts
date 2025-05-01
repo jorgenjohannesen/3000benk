@@ -1,27 +1,27 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { auth } from '@/lib/auth';
+import { NextRequestWithAuth } from 'next-auth/middleware';
 
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  
-  // Check if the path is an admin route but not the login page
-  const isAdminRoute = pathname.startsWith('/admin') && !pathname.startsWith('/admin/login');
-  
-  if (isAdminRoute) {
-    const token = await getToken({ req: request });
-    
-    // If no token, redirect to login
-    if (!token) {
-      const loginUrl = new URL('/admin/login', request.url);
-      loginUrl.searchParams.set('callbackUrl', pathname);
-      return NextResponse.redirect(loginUrl);
-    }
+export default auth((req: NextRequestWithAuth) => {
+  const { pathname } = req.nextUrl;
+  const isLoggedIn = !!req.nextauth?.token;
+
+  // Protect all routes under /admin except the login page itself
+  if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login') && !isLoggedIn) {
+    const loginUrl = new URL('/admin/login', req.url);
+    return NextResponse.redirect(loginUrl);
   }
-  
-  return NextResponse.next();
-}
 
+  // If logged in and trying to access login page, redirect to admin dashboard
+  if (pathname.startsWith('/admin/login') && isLoggedIn) {
+    const adminUrl = new URL('/admin', req.url);
+    return NextResponse.redirect(adminUrl);
+  }
+
+  return NextResponse.next();
+});
+
+// Define which paths the middleware should run on
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: ['/admin/:path*', '/admin/login'],
 }; 

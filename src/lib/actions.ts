@@ -1,148 +1,177 @@
 'use server';
 
 import { z } from 'zod';
-import { 
-  addParticipant, 
-  updateParticipant, 
-  deleteParticipant, 
-  getParticipants, 
-  Participant 
-} from './data';
 import { revalidatePath } from 'next/cache';
-import { v4 as uuid } from 'uuid';
+import { Participant } from './data';
+import { redirect } from 'next/navigation';
+import { auth } from './auth';
+import { put, list, del } from "@vercel/blob";
 
-// Schema for participant validation
-const participantSchema = z.object({
-  name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  startNumber: z.number().optional(),
-  startTime: z.string().optional(),
-  finishTime: z.string().optional(),
-  category: z.string().optional(),
-  notes: z.string().optional(),
+// Zod schema for validation
+const ParticipantSchema = z.object({
+    name: z.string().min(1, "Name is required"),
+    gender: z.enum(['male', 'female', 'other']),
+    bibNumber: z.string().optional(),
+    benchKg: z.number().nullable(),
+    runTimeSeconds: z.number().nullable(),
 });
 
-// Add a new participant
-export async function createParticipant(formData: FormData) {
-  const name = formData.get('name') as string;
-  const startNumber = formData.get('startNumber') ? parseInt(formData.get('startNumber') as string) : undefined;
-  const startTime = formData.get('startTime') as string || undefined;
-  const finishTime = formData.get('finishTime') as string || undefined;
-  const category = formData.get('category') as string || undefined;
-  const notes = formData.get('notes') as string || undefined;
+const BenchSchema = z.object({
+    id: z.string(),
+    benchKg: z.coerce.number().min(0, "Bench KG must be positive").nullable(), // coerce converts string input
+});
 
-  try {
-    // Validate data
-    participantSchema.parse({
-      name,
-      startNumber,
-      startTime,
-      finishTime,
-      category,
-      notes,
-    });
+const RunTimeSchema = z.object({
+    id: z.string(),
+    // Accept MM:SS format or just seconds
+    runTimeInput: z.string().refine((val) => {
+        if (val === null || val === '') return true; // Allow empty input
+        if (/^\d+$/.test(val)) return true; // Allow raw seconds
+        return /^\d{1,2}:\d{2}(\.\d+)?$/.test(val); // Allow MM:SS or MM:SS.ms
+    }, { message: "Invalid time format (use MM:SS or seconds)" }).nullable(),
+});
 
-    // Create participant
+async function checkAuth() {
+    const session = await auth();
+    if (!session?.user) {
+        throw new Error('Unauthorized');
+    }
+}
+
+export async function getParticipantsWithSort(): Promise<Participant[]> {
+    const { blobs } = await list({ prefix: "participants/" })
+    const participants: Participant[] = []
+
+    for (const blob of blobs) {
+        const response = await fetch(blob.url)
+        const data = await response.json()
+        participants.push(data)
+    }
+
+    return participants.sort((a, b) => {
+        if (a.benchKg !== b.benchKg) {
+            return (b.benchKg || 0) - (a.benchKg || 0)
+        }
+        return a.name.localeCompare(b.name)
+    })
+}
+
+export async function handleAddParticipant(formData: FormData) {
+    await checkAuth();
+    const name = formData.get("name") as string
+    const gender = formData.get("gender") as "male" | "female" | "other"
+    const bibNumber = formData.get("bibNumber") as string
+    const benchKg = formData.get("benchKg") ? Number(formData.get("benchKg")) : null
+    const runTimeSeconds = formData.get("runTimeSeconds") ? Number(formData.get("runTimeSeconds")) : null
+
+    const validation = ParticipantSchema.safeParse({
+        name,
+        gender,
+        bibNumber,
+        benchKg,
+        runTimeSeconds,
+    })
+
+    if (!validation.success) {
+        return { success: false, error: validation.error.format() }
+    }
+
     const participant: Participant = {
-      id: uuid(),
-      name,
-      startNumber,
-      startTime,
-      finishTime,
-      category,
-      notes,
-    };
-
-    await addParticipant(participant);
-    revalidatePath('/admin');
-    revalidatePath('/leaderboard');
-    revalidatePath('/startlist');
-    return { success: true };
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return { success: false, error: error.flatten().fieldErrors };
+        id: crypto.randomUUID(),
+        name,
+        gender,
+        bibNumber,
+        benchKg,
+        runTimeSeconds,
     }
-    return { success: false, error: 'Failed to create participant' };
-  }
+
+    await put(`participants/${participant.id}.json`, JSON.stringify(participant), {
+        access: "public",
+    })
+
+    revalidatePath('/admin');
+    revalidatePath('/startlist');
+    revalidatePath('/leaderboard');
+
+    return { success: true, data: participant }
 }
 
-// Update a participant
-export async function updateParticipantAction(id: string, formData: FormData) {
-  const name = formData.get('name') as string;
-  const startNumber = formData.get('startNumber') ? parseInt(formData.get('startNumber') as string) : undefined;
-  const startTime = formData.get('startTime') as string || undefined;
-  const finishTime = formData.get('finishTime') as string || undefined;
-  const category = formData.get('category') as string || undefined;
-  const notes = formData.get('notes') as string || undefined;
+export async function handleUpdateParticipant(id: string, formData: FormData) {
+    await checkAuth();
+    const name = formData.get("name") as string
+    const gender = formData.get("gender") as "male" | "female" | "other"
+    const bibNumber = formData.get("bibNumber") as string
+    const benchKg = formData.get("benchKg") ? Number(formData.get("benchKg")) : null
+    const runTimeSeconds = formData.get("runTimeSeconds") ? Number(formData.get("runTimeSeconds")) : null
 
-  try {
-    // Validate data
-    participantSchema.parse({
-      name,
-      startNumber,
-      startTime,
-      finishTime,
-      category,
-      notes,
-    });
+    const validation = ParticipantSchema.safeParse({
+        name,
+        gender,
+        bibNumber,
+        benchKg,
+        runTimeSeconds,
+    })
 
-    // Update participant
-    await updateParticipant(id, {
-      name,
-      startNumber,
-      startTime,
-      finishTime,
-      category,
-      notes,
-    });
-    
-    revalidatePath('/admin');
-    revalidatePath('/leaderboard');
-    revalidatePath('/startlist');
-    return { success: true };
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return { success: false, error: error.flatten().fieldErrors };
+    if (!validation.success) {
+        return { success: false, error: validation.error.format() }
     }
-    return { success: false, error: 'Failed to update participant' };
-  }
+
+    const participant: Participant = {
+        id,
+        name,
+        gender,
+        bibNumber,
+        benchKg,
+        runTimeSeconds,
+    }
+
+    await put(`participants/${id}.json`, JSON.stringify(participant), {
+        access: "public",
+    })
+
+    revalidatePath('/admin');
+    revalidatePath('/startlist');
+    revalidatePath('/leaderboard');
+
+    return { success: true, data: participant }
 }
 
-// Delete a participant
-export async function deleteParticipantAction(id: string) {
-  try {
-    await deleteParticipant(id);
+export async function handleDeleteParticipant(id: string) {
+    await checkAuth();
+    await del(`participants/${id}.json`)
     revalidatePath('/admin');
-    revalidatePath('/leaderboard');
     revalidatePath('/startlist');
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: 'Failed to delete participant' };
-  }
+    revalidatePath('/leaderboard');
+    return { success: true }
 }
 
-// Get participants with optional sorting
-export async function getParticipantsWithSort(sortBy?: 'startTime' | 'finishTime' | 'startNumber' | 'name') {
-  const participants = await getParticipants();
-  
-  if (!sortBy) return participants;
-  
-  return participants.sort((a, b) => {
-    if (sortBy === 'name') {
-      return a.name.localeCompare(b.name);
+export async function handleUpdateBench(prevState: any, formData: FormData) {
+    await checkAuth();
+    const id = formData.get('id') as string;
+    const benchKg = formData.get('benchKg') ? Number(formData.get('benchKg')) : null;
+
+    const participant = await handleUpdateParticipant(id, formData);
+    if (!participant.success) {
+        return { message: 'Failed to update bench result.', errors: participant.error };
     }
-    
-    if (sortBy === 'startNumber') {
-      const aNum = a.startNumber || 0;
-      const bNum = b.startNumber || 0;
-      return aNum - bNum;
+
+    revalidatePath('/admin');
+    revalidatePath('/startlist');
+    revalidatePath('/leaderboard');
+    return { message: 'Bench result updated.', errors: {} };
+}
+
+export async function handleUpdateRunTime(prevState: any, formData: FormData) {
+    await checkAuth();
+    const id = formData.get('id') as string;
+    const runTimeSeconds = formData.get('runTimeSeconds') ? Number(formData.get('runTimeSeconds')) : null;
+
+    const participant = await handleUpdateParticipant(id, formData);
+    if (!participant.success) {
+        return { message: 'Failed to update run time.', errors: participant.error };
     }
-    
-    if (sortBy === 'startTime' || sortBy === 'finishTime') {
-      const aTime = a[sortBy] || '';
-      const bTime = b[sortBy] || '';
-      return aTime.localeCompare(bTime);
-    }
-    
-    return 0;
-  });
+
+    revalidatePath('/admin');
+    revalidatePath('/leaderboard');
+    return { message: 'Run time updated.', errors: {} };
 } 

@@ -1,53 +1,41 @@
-import { NextAuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
+import NextAuth from 'next-auth';
+import CredentialsProvider from 'next-auth/providers/credentials';
 
-// These values would typically be stored securely in environment variables
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "password";
-
-export const authOptions: NextAuthOptions = {
+export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     CredentialsProvider({
-      name: "Credentials",
+      name: 'Credentials',
       credentials: {
-        username: { label: "Username", type: "text" },
-        password: { label: "Password", type: "password" },
+        username: { label: 'Username', type: 'text', placeholder: 'admin' },
+        password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        // Simple credential check
-        if (
-          credentials?.username === ADMIN_USERNAME &&
-          credentials?.password === ADMIN_PASSWORD
-        ) {
-          return {
-            id: "1",
-            name: "Admin",
-            email: "admin@example.com",
-          };
+        // !! WARNING: Basic check for simplicity. Use hashed passwords in a real app !!
+        const adminUsername = process.env.ADMIN_USERNAME;
+        const adminPassword = process.env.ADMIN_PASSWORD;
+
+        if (!adminUsername || !adminPassword) {
+          console.error('Admin credentials not set in environment variables!');
+          return null;
         }
-        return null;
+
+        if (
+          credentials?.username === adminUsername &&
+          credentials?.password === adminPassword
+        ) {
+          // Return a user object (can be simple)
+          return { id: '1', name: 'Admin', email: 'admin@example.com' };
+        } else {
+          return null; // Authentication failed
+        }
       },
     }),
   ],
   pages: {
-    signIn: "/admin/login",
+    signIn: '/admin/login', // Redirect to custom login page
   },
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.name = user.name;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-      }
-      return session;
-    },
-  },
-  session: {
-    strategy: "jwt",
-  },
-}; 
+  // Add secret for JWT signing
+  secret: process.env.AUTH_SECRET,
+  // Optional: Add session strategy (jwt is default and fine here)
+  // session: { strategy: "jwt" },
+}); 
