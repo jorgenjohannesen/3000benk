@@ -5,7 +5,6 @@ export interface Participant {
   id: string;
   name: string;
   gender: 'male' | 'female' | 'other';
-  bibNumber?: string; // Optional bib number
   benchKg: number | null;
   runTimeSeconds: number | null; // Store run time in seconds
 }
@@ -62,7 +61,7 @@ export async function addParticipant(participantData: Omit<Participant, 'id' | '
   return newParticipant;
 }
 
-export async function updateParticipant(id: string, data: Partial<Pick<Participant, 'name' | 'bibNumber' | 'benchKg' | 'runTimeSeconds'>>): Promise<Participant | null> {
+export async function updateParticipant(id: string, data: Partial<Pick<Participant, 'name' | 'benchKg' | 'runTimeSeconds'>>): Promise<Participant | null> {
   const participants = await getParticipants();
   let updatedParticipant: Participant | null = null;
   const updatedParticipants = participants.map(p => {

@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button"
 import { formatTime } from "@/lib/utils"
 
 export function createColumns(
-  handleDelete: (id: string) => Promise<void>,
-  setEditingParticipant: (participant: Participant | null) => void
+  handleDelete: (id: string) => void,
+  handleEdit: (participant: Participant) => void
 ): ColumnDef<Participant>[] {
   return [
     {
@@ -19,8 +19,13 @@ export function createColumns(
       header: "Kjønn",
       cell: ({ row }) => {
         const gender = row.getValue("gender") as string;
-        return gender === "male" ? "Mann" : gender === "female" ? "Kvinne" : "Annet";
-      },
+        const genderMap: { [key: string]: string } = {
+          male: "Mann",
+          female: "Kvinne",
+          other: "Annet"
+        };
+        return genderMap[gender] || gender;
+      }
     },
     {
       accessorKey: "benchKg",
@@ -39,31 +44,15 @@ export function createColumns(
       },
     },
     {
-      accessorKey: "bibNumber",
-      header: "Startnummer",
-      cell: ({ row }) => {
-        const bibNumber = row.getValue("bibNumber") as number;
-        return bibNumber || "-";
-      },
-    },
-    {
       id: "actions",
       cell: ({ row }) => {
         const participant = row.original;
         return (
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEditingParticipant(participant)}
-            >
+            <Button variant="outline" size="sm" onClick={() => handleEdit(participant)}>
               Rediger
             </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => handleDelete(participant.id)}
-            >
+            <Button variant="destructive" size="sm" onClick={() => handleDelete(participant.id)}>
               Slett
             </Button>
           </div>

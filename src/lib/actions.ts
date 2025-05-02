@@ -10,7 +10,6 @@ import { put, list, del } from "@vercel/blob";
 const ParticipantSchema = z.object({
     name: z.string().min(1, "Name is required"),
     gender: z.enum(['male', 'female', 'other']),
-    bibNumber: z.string().optional(),
     benchKg: z.number().nullable(),
     runTimeSeconds: z.number().nullable(),
 });
@@ -52,14 +51,12 @@ export async function getParticipantsWithSort(): Promise<Participant[]> {
 export async function handleAddParticipant(formData: FormData) {
     const name = formData.get("name") as string
     const gender = formData.get("gender") as "male" | "female" | "other"
-    const bibNumber = formData.get("bibNumber") as string
     const benchKg = formData.get("benchKg") ? Number(formData.get("benchKg")) : null
     const runTimeSeconds = formData.get("runTimeSeconds") ? Number(formData.get("runTimeSeconds")) : null
 
     const validation = ParticipantSchema.safeParse({
         name,
         gender,
-        bibNumber,
         benchKg,
         runTimeSeconds,
     })
@@ -72,7 +69,6 @@ export async function handleAddParticipant(formData: FormData) {
         id: crypto.randomUUID(),
         name,
         gender,
-        bibNumber,
         benchKg,
         runTimeSeconds,
     }
@@ -91,14 +87,12 @@ export async function handleAddParticipant(formData: FormData) {
 export async function handleUpdateParticipant(id: string, formData: FormData) {
     const name = formData.get("name") as string
     const gender = formData.get("gender") as "male" | "female" | "other"
-    const bibNumber = formData.get("bibNumber") as string
     const benchKg = formData.get("benchKg") ? Number(formData.get("benchKg")) : null
     const runTimeSeconds = formData.get("runTimeSeconds") ? Number(formData.get("runTimeSeconds")) : null
 
     const validation = ParticipantSchema.safeParse({
         name,
         gender,
-        bibNumber,
         benchKg,
         runTimeSeconds,
     })
@@ -111,7 +105,6 @@ export async function handleUpdateParticipant(id: string, formData: FormData) {
         id,
         name,
         gender,
-        bibNumber,
         benchKg,
         runTimeSeconds,
     }

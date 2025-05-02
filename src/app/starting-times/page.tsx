@@ -69,6 +69,22 @@ export default function StartingTimesPage() {
   const strongestMale = maleParticipants[0];
   const strongestFemale = femaleParticipants[0];
 
+  // Only show participants with a bench press value
+  const filteredParticipants = participants.filter(
+    (p) => p.benchKg !== null && p.benchKg !== undefined
+  );
+  // Sort by bench press descending
+  const sortedParticipants = [...filteredParticipants].sort((a, b) => (b.benchKg || 0) - (a.benchKg || 0));
+  const strongestBench = sortedParticipants[0]?.benchKg || 0;
+
+  function formatOffset(seconds: number) {
+    if (seconds <= 0) return '0 sekunder bak';
+    const min = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+    if (min > 0) return `${min} min ${sec} sekunder bak`;
+    return `${sec} sekunder bak`;
+  }
+
   if (loading) {
     return <div>Laster...</div>;
   }
@@ -83,11 +99,49 @@ export default function StartingTimesPage() {
         {strongestMale && (
           <div className="bg-blue-100 border-l-4 border-blue-500 p-4 mb-8">
             <p className="text-blue-700">
-              <span className="font-semibold">Den sterkeste mannen:</span> {strongestMale.name} ({strongestMale.benchKg} kg) starter kl. {calculateStartTime(strongestMale.benchKg || 0)}
+                <span className="font-semibold">Den sterkeste mannen:</span> {strongestMale.name} ({strongestMale.benchKg} kg) starter først!
             </p>
           </div>
         )}
-        <DataTable columns={columns} data={maleParticipants} />
+        <DataTable
+          columns={[
+            {
+              accessorKey: 'name',
+              header: 'Navn',
+            },
+            {
+              accessorKey: 'gender',
+              header: 'Kjønn',
+              cell: ({ row }) => {
+                const gender = row.getValue('gender') as string;
+                const genderMap: { [key: string]: string } = {
+                  male: 'Mann',
+                  female: 'Kvinne',
+                  other: 'Annet',
+                };
+                return genderMap[gender] || gender;
+              },
+            },
+            {
+              accessorKey: 'benchKg',
+              header: 'Benkpress (kg)',
+              cell: ({ row }) => {
+                const benchKg = row.getValue('benchKg') as number;
+                return benchKg ? `${benchKg} kg` : '-';
+              },
+            },
+            {
+              id: 'offset',
+              header: 'Startforskjell',
+              cell: ({ row }) => {
+                const benchKg = row.getValue('benchKg') as number;
+                const offset = (strongestBench - (benchKg || 0)) * 3;
+                return formatOffset(offset);
+              },
+            },
+          ]}
+          data={sortedParticipants}
+        />
       </div>
 
       {/* Women's Section */}

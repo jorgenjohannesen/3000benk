@@ -8,7 +8,6 @@ interface CSVRow {
   name: string;
   gender: string;
   benchKg: number;
-  bibNumber?: number;
 }
 
 interface CSVUploadProps {
@@ -37,7 +36,7 @@ export function CSVUpload({ onUploadComplete }: CSVUploadProps) {
       let errorCount = 0;
 
       for (const row of dataRows) {
-        const [name, gender, benchKg, bibNumber] = row.split(',').map(item => item.trim());
+        const [name, gender, benchKg] = row.split(',').map(item => item.trim());
         
         if (!name || !gender || !benchKg) {
           errorCount++;
@@ -48,7 +47,6 @@ export function CSVUpload({ onUploadComplete }: CSVUploadProps) {
           name,
           gender: gender.toLowerCase(),
           benchKg: parseInt(benchKg),
-          bibNumber: bibNumber ? parseInt(bibNumber) : null,
           runTimeSeconds: 0
         };
 
@@ -100,11 +98,11 @@ export function CSVUpload({ onUploadComplete }: CSVUploadProps) {
       <div className="text-sm text-gray-500">
         <p>CSV-format:</p>
         <pre className="mt-1 p-2 bg-gray-100 rounded">
-          navn,kjønn,benkpress_kg,startnummer
+          navn,kjønn,benkpress_kg
           <br />
           Eksempel:
           <br />
-          Jan Kristian,male,150,1
+          Jan Kristian,male,150
         </pre>
       </div>
     </div>

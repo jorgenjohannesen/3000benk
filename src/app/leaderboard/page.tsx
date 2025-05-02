@@ -47,7 +47,11 @@ export default function LeaderboardPage() {
     return participant.benchKg * 1000 / participant.runTimeSeconds;
   };
 
-  const filteredAndSortedParticipants = participants
+  const filteredParticipants = participants.filter(
+    (p) => p.benchKg !== null && p.benchKg !== undefined && p.runTimeSeconds !== null && p.runTimeSeconds !== undefined
+  );
+
+  const filteredAndSortedParticipants = filteredParticipants
     .filter(participant => genderFilter === 'all' || participant.gender === genderFilter)
     .map(participant => ({
       ...participant,

@@ -1,9 +1,24 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { Participant } from "@/lib/data"
 import { formatTime } from "@/lib/utils"
+import { Medal } from "lucide-react"
 
 export function createColumns(): ColumnDef<Participant & { score: number }>[] {
   return [
+    {
+      id: "placement",
+      header: "Plass",
+      cell: ({ row }) => {
+        const index = row.index + 1;
+        let color = '';
+        if (index === 1) color = 'text-yellow-500';
+        if (index === 2) color = 'text-gray-400';
+        if (index === 3) color = 'text-amber-700';
+        return (
+          <span className={`font-bold text-lg ${color}`}>{index}</span>
+        );
+      },
+    },
     {
       accessorKey: "name",
       header: "Navn",
@@ -13,8 +28,13 @@ export function createColumns(): ColumnDef<Participant & { score: number }>[] {
       header: "Kjønn",
       cell: ({ row }) => {
         const gender = row.getValue("gender") as string;
-        return gender === "male" ? "Mann" : gender === "female" ? "Kvinne" : "Annet";
-      },
+        const genderMap: { [key: string]: string } = {
+          male: "Mann",
+          female: "Kvinne",
+          other: "Annet"
+        };
+        return genderMap[gender] || gender;
+      }
     },
     {
       accessorKey: "benchKg",
@@ -40,5 +60,5 @@ export function createColumns(): ColumnDef<Participant & { score: number }>[] {
         return score ? score.toFixed(2) : "-";
       },
     },
-  ]
+  ];
 } 
