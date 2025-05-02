@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CSVUpload } from "@/components/csv-upload"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { toast } from "sonner";
 
 export default function AdminPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -78,6 +79,7 @@ export default function AdminPage() {
         setRunSeconds('');
         setIsDialogOpen(false);
         loadParticipants();
+        toast.success('Deltaker lagt til!');
       } else {
         alert('Kunne ikke legge til deltaker: ' + JSON.stringify(result.error));
       }
@@ -106,6 +108,7 @@ export default function AdminPage() {
         setRunSeconds('');
         setIsDialogOpen(false);
         loadParticipants();
+        toast.success('Deltaker oppdatert!');
       } else {
         alert('Kunne ikke oppdatere deltaker: ' + JSON.stringify(result.error));
       }
@@ -126,6 +129,7 @@ export default function AdminPage() {
         const result = await handleDeleteParticipant(participantToDelete.id);
         if (result.success) {
           loadParticipants();
+          toast.success('Deltaker slettet!');
         } else {
           alert('Kunne ikke slette deltaker');
         }
