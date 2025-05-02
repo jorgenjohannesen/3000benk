@@ -5,7 +5,7 @@ export interface Participant {
   id: string;
   name: string;
   gender: 'male' | 'female' | 'other';
-  benchKg: number | null;
+  benchKg: number | null; // allow float
   runTimeSeconds: number | null; // Store run time in seconds
 }
 

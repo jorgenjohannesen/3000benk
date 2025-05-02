@@ -64,7 +64,7 @@ export default function AdminPage() {
     const formData = new FormData();
     formData.append('name', newParticipant.name);
     formData.append('gender', newParticipant.gender || 'male');
-    if (newParticipant.benchKg) formData.append('benchKg', newParticipant.benchKg.toString());
+    if (newParticipant.benchKg !== null && newParticipant.benchKg !== undefined) formData.append('benchKg', newParticipant.benchKg.toString());
     if (totalSeconds > 0) formData.append('runTimeSeconds', totalSeconds.toString());
     
     try {
@@ -98,7 +98,7 @@ export default function AdminPage() {
     const formData = new FormData();
     formData.append('name', editingParticipant.name);
     formData.append('gender', editingParticipant.gender);
-    if (editingParticipant.benchKg) formData.append('benchKg', editingParticipant.benchKg.toString());
+    if (editingParticipant.benchKg !== null && editingParticipant.benchKg !== undefined) formData.append('benchKg', editingParticipant.benchKg.toString());
     if (totalSeconds > 0) formData.append('runTimeSeconds', totalSeconds.toString());
     
     try {
@@ -252,9 +252,10 @@ export default function AdminPage() {
                 id="benchKg"
                 type="number"
                 min="0"
+                step="0.1"
                 value={editingParticipant?.benchKg || newParticipant.benchKg || ''}
                 onChange={(e) => {
-                  const value = e.target.value ? parseInt(e.target.value) : null;
+                  const value = e.target.value ? parseFloat(e.target.value) : null;
                   if (editingParticipant) {
                     setEditingParticipant({ ...editingParticipant, benchKg: value });
                   } else {

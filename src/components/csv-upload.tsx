@@ -46,7 +46,7 @@ export function CSVUpload({ onUploadComplete }: CSVUploadProps) {
         const participantData = {
           name,
           gender: gender.toLowerCase(),
-          benchKg: parseInt(benchKg),
+          benchKg: parseFloat(benchKg),
           runTimeSeconds: 0
         };
 
