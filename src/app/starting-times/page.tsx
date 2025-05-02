@@ -69,13 +69,21 @@ export default function StartingTimesPage() {
   const strongestMale = maleParticipants[0];
   const strongestFemale = femaleParticipants[0];
 
-  // Only show participants with a bench press value
-  const filteredParticipants = participants.filter(
+  // Only show male participants with a bench press value
+  const filteredMaleParticipants = maleParticipants.filter(
     (p) => p.benchKg !== null && p.benchKg !== undefined
   );
   // Sort by bench press descending
-  const sortedParticipants = [...filteredParticipants].sort((a, b) => (b.benchKg || 0) - (a.benchKg || 0));
-  const strongestBench = sortedParticipants[0]?.benchKg || 0;
+  const sortedMaleParticipants = [...filteredMaleParticipants].sort((a, b) => (b.benchKg || 0) - (a.benchKg || 0));
+  const strongestMaleBench = sortedMaleParticipants[0]?.benchKg || 0;
+
+  // Only show participants with a bench press value
+  const filteredFemaleParticipants = femaleParticipants.filter(
+    (p) => p.benchKg !== null && p.benchKg !== undefined
+  );
+  // Sort by bench press descending
+  const sortedFemaleParticipants = [...filteredFemaleParticipants].sort((a, b) => (b.benchKg || 0) - (a.benchKg || 0));
+  const strongestFemaleBench = sortedFemaleParticipants[0]?.benchKg || 0;
 
   function formatOffset(seconds: number) {
     if (seconds <= 0) return '0 sekunder bak';
@@ -86,7 +94,15 @@ export default function StartingTimesPage() {
   }
 
   if (loading) {
-    return <div>Laster...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-64">
+        <svg className="animate-spin h-10 w-10 text-blue-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+        </svg>
+        <span className="text-blue-700 font-medium">Laster...</span>
+      </div>
+    );
   }
 
   return (
@@ -135,12 +151,12 @@ export default function StartingTimesPage() {
               header: 'Startforskjell',
               cell: ({ row }) => {
                 const benchKg = row.getValue('benchKg') as number;
-                const offset = (strongestBench - (benchKg || 0)) * 3;
+                const offset = (strongestMaleBench - (benchKg || 0)) * 3;
                 return formatOffset(offset);
               },
             },
           ]}
-          data={sortedParticipants}
+          data={sortedMaleParticipants}
         />
       </div>
 
@@ -150,11 +166,49 @@ export default function StartingTimesPage() {
         {strongestFemale && (
           <div className="bg-pink-100 border-l-4 border-pink-500 p-4 mb-8">
             <p className="text-pink-700">
-              <span className="font-semibold">Den sterkeste kvinnen:</span> {strongestFemale.name} ({strongestFemale.benchKg} kg) starter kl. {calculateStartTime(strongestFemale.benchKg || 0)}
+              <span className="font-semibold">Den sterkeste kvinnen:</span> {strongestFemale.name} ({strongestFemale.benchKg} kg) starter først!
             </p>
           </div>
         )}
-        <DataTable columns={columns} data={femaleParticipants} />
+        <DataTable
+          columns={[
+            {
+              accessorKey: 'name',
+              header: 'Navn',
+            },
+            {
+              accessorKey: 'gender',
+              header: 'Kjønn',
+              cell: ({ row }) => {
+                const gender = row.getValue('gender') as string;
+                const genderMap: { [key: string]: string } = {
+                  male: 'Mann',
+                  female: 'Kvinne',
+                  other: 'Annet',
+                };
+                return genderMap[gender] || gender;
+              },
+            },
+            {
+              accessorKey: 'benchKg',
+              header: 'Benkpress (kg)',
+              cell: ({ row }) => {
+                const benchKg = row.getValue('benchKg') as number;
+                return benchKg ? `${benchKg} kg` : '-';
+              },
+            },
+            {
+              id: 'offset',
+              header: 'Startforskjell',
+              cell: ({ row }) => {
+                const benchKg = row.getValue('benchKg') as number;
+                const offset = (strongestFemaleBench - (benchKg || 0)) * 3;
+                return formatOffset(offset);
+              },
+            },
+          ]}
+          data={sortedFemaleParticipants}
+        />
       </div>
     </div>
   );

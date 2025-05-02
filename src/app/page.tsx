@@ -56,7 +56,7 @@ export default function HomePage() {
                 </li>
                 <li className="flex items-start">
                   <span className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold mr-4">2</span>
-                  <span>Dette er en jaktstart - når den første deltakeren begynner å løpe, er løpet i gang! Alle andre må starte løpet umiddelbart.</span>
+                  <span>Dette er en jaktstart - når den første deltakeren begynner å løpe, er løpet i gang!</span>
                 </li>
                 <li className="flex items-start">
                   <span className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold mr-4">3</span>
