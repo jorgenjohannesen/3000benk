@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CSVUpload } from "@/components/csv-upload"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { toast } from "sonner";
+import { saveAs } from "file-saver";
 
 export default function AdminPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -166,6 +167,20 @@ export default function AdminPage() {
 
   const columns = createColumns(handleDelete, handleOpenEdit);
 
+  function exportCSV() {
+    if (participants.length === 0) return;
+    const header = ["name","gender","benchKg","runTimeSeconds"];
+    const rows = participants.map(p => [
+      p.name,
+      p.gender,
+      p.benchKg ?? '',
+      p.runTimeSeconds ?? ''
+    ]);
+    const csvContent = [header, ...rows].map(row => row.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    saveAs(blob, "deltakere.csv");
+  }
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
@@ -184,6 +199,7 @@ export default function AdminPage() {
         <h1 className="text-2xl font-bold">Administrasjon</h1>
         <div className="flex gap-4">
           <Button onClick={() => setIsDialogOpen(true)}>Legg til deltaker</Button>
+          <Button variant="outline" onClick={exportCSV}>Eksporter CSV</Button>
           <CSVUpload onUploadComplete={loadParticipants} />
         </div>
       </div>

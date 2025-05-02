@@ -65,6 +65,43 @@ export async function handleAddParticipant(formData: FormData) {
         return { success: false, error: validation.error.format() }
     }
 
+    // Fetch all participants to check for duplicates
+    const { blobs } = await list({ prefix: "participants/" })
+    let existing: Participant | undefined = undefined;
+    let existingBlobKey: string | undefined = undefined;
+    for (const blob of blobs) {
+        const response = await fetch(blob.url)
+        const data = await response.json() as Participant;
+        if (data.name.trim().toLowerCase() === name.trim().toLowerCase()) {
+            existing = data;
+            existingBlobKey = blob.pathname.replace(/^\//, '');
+            break;
+        }
+    }
+
+    if (existing) {
+        // If the new bench is higher, update the existing participant
+        if ((benchKg || 0) > (existing.benchKg || 0)) {
+            const updated: Participant = {
+                ...existing,
+                benchKg,
+                runTimeSeconds,
+                gender,
+            };
+            await put(existingBlobKey!, JSON.stringify(updated), {
+                access: "public",
+                allowOverwrite: true
+            });
+            revalidatePath('/admin');
+            revalidatePath('/startlist');
+            revalidatePath('/leaderboard');
+            return { success: true, data: updated, updated: true };
+        } else {
+            // Do not add or update if the new bench is not higher
+            return { success: false, error: { message: "Lavere eller lik benkpress enn eksisterende deltaker." } };
+        }
+    }
+
     const participant: Participant = {
         id: crypto.randomUUID(),
         name,
