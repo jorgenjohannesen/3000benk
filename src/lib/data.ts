@@ -1,5 +1,7 @@
-import { put, list, del } from '@vercel/blob';
-import { unstable_noStore as noStore } from 'next/cache';
+import { promises as fs } from 'fs';
+import path from 'path';
+
+const DATA_PATH = path.join(process.cwd(), 'data', 'participants.json');
 
 export interface Participant {
   id: string;
@@ -9,59 +11,33 @@ export interface Participant {
   runTimeSeconds: number | null; // Store run time in seconds
 }
 
-const BLOB_STORE_KEY = 'participants.json'; // Your blob file name
-
 export async function getParticipants(): Promise<Participant[]> {
-  noStore(); // Opt out of caching for dynamic data
   try {
-    // List all blobs to find our file
-    const { blobs } = await list();
-    const participantBlob = blobs.find(blob => blob.pathname === BLOB_STORE_KEY);
-    
-    if (!participantBlob) {
-      return [];
-    }
-    
-    // Fetch the blob content
-    const response = await fetch(participantBlob.url);
-    const text = await response.text();
-    
-    if (!text) return [];
-    return JSON.parse(text) as Participant[];
-  } catch (error: any) {
-    console.error('Error fetching participants:', error);
-    return []; // Return empty array on error
+    const data = await fs.readFile(DATA_PATH, 'utf-8');
+    return JSON.parse(data) as Participant[];
+  } catch (err) {
+    // If file doesn't exist, return empty array
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return [];
+    throw err;
   }
 }
 
 export async function saveParticipants(participants: Participant[]): Promise<void> {
-  try {
-    const json = JSON.stringify(participants, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    await put(BLOB_STORE_KEY, blob, {
-      access: 'public',
-      addRandomSuffix: false,
-    });
-  } catch (error) {
-    console.error('Error saving participants:', error);
-    throw new Error('Failed to save participants.');
-  }
+  await fs.writeFile(DATA_PATH, JSON.stringify(participants, null, 2), 'utf-8');
 }
 
-export async function addParticipant(participantData: Omit<Participant, 'id' | 'benchKg' | 'runTimeSeconds'>): Promise<Participant> {
+export async function addParticipant(participantData: Omit<Participant, 'id'>): Promise<Participant> {
   const participants = await getParticipants();
   const newParticipant: Participant = {
     ...participantData,
     id: crypto.randomUUID(),
-    benchKg: null,
-    runTimeSeconds: null,
   };
-  const updatedParticipants = [...participants, newParticipant];
-  await saveParticipants(updatedParticipants);
+  participants.push(newParticipant);
+  await saveParticipants(participants);
   return newParticipant;
 }
 
-export async function updateParticipant(id: string, data: Partial<Pick<Participant, 'name' | 'benchKg' | 'runTimeSeconds'>>): Promise<Participant | null> {
+export async function updateParticipant(id: string, data: Partial<Pick<Participant, 'name' | 'benchKg' | 'runTimeSeconds' | 'gender'>>): Promise<Participant | null> {
   const participants = await getParticipants();
   let updatedParticipant: Participant | null = null;
   const updatedParticipants = participants.map(p => {
@@ -71,7 +47,6 @@ export async function updateParticipant(id: string, data: Partial<Pick<Participa
     }
     return p;
   });
-
   if (updatedParticipant) {
     await saveParticipants(updatedParticipants);
   }

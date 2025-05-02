@@ -12,12 +12,38 @@ import { Metadata } from "next"
 import Link from "next/link"
 import { Countdown } from "@/components/countdown"
 import Image from "next/image"
+import Confetti from 'react-confetti';
 
 type SortField = keyof Participant | 'score';
 
 export default function HomePage() {
+  const [showConfetti, setShowConfetti] = useState(true);
+  const [showPopup, setShowPopup] = useState(true);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    // Set window size on client only
+    function handleResize() {
+      setDimensions({ width: window.innerWidth, height: window.innerHeight });
+    }
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    // Stop confetti after 5 seconds
+    if (showConfetti) {
+      const timer = setTimeout(() => setShowConfetti(false), 30000);
+      return () => clearTimeout(timer);
+    }
+  }, [showConfetti]);
+
   return (
     <div className="relative min-h-screen">
+      {showConfetti && dimensions.width > 0 && dimensions.height > 0 && (
+        <Confetti width={dimensions.width} height={dimensions.height} recycle={false} numberOfPieces={400} />
+      )}
       {/* Background Image */}
       <div className="absolute inset-0 z-0">
         <Image
@@ -41,7 +67,7 @@ export default function HomePage() {
               </p>
               <div className="bg-yellow-100/90 border-l-4 border-yellow-500 p-4 mb-8">
                 <p className="text-yellow-700">
-                  <span className="font-semibold">Regjerende Mester:</span> Jan Kristian Alstergren
+                  <span className="font-semibold">Regjerende Mester:</span> Erlend Aanesland Dahle
                 </p>
               </div>
               <Countdown />

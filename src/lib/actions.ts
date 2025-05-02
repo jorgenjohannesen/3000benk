@@ -2,9 +2,7 @@
 
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { Participant } from './data';
-import { redirect } from 'next/navigation';
-import { put, list, del } from "@vercel/blob";
+import { Participant, getParticipants, addParticipant, updateParticipant, deleteParticipant } from './data';
 
 // Zod schema for validation
 const ParticipantSchema = z.object({
@@ -29,23 +27,14 @@ const RunTimeSchema = z.object({
     }, { message: "Invalid time format (use MM:SS or seconds)" }).nullable(),
 });
 
-
 export async function getParticipantsWithSort(): Promise<Participant[]> {
-    const { blobs } = await list({ prefix: "participants/" })
-    const participants: Participant[] = []
-
-    for (const blob of blobs) {
-        const response = await fetch(blob.url)
-        const data = await response.json()
-        participants.push(data)
-    }
-
+    const participants = await getParticipants();
     return participants.sort((a, b) => {
         if (a.benchKg !== b.benchKg) {
             return (b.benchKg || 0) - (a.benchKg || 0)
         }
         return a.name.localeCompare(b.name)
-    })
+    });
 }
 
 export async function handleAddParticipant(formData: FormData) {
@@ -65,60 +54,17 @@ export async function handleAddParticipant(formData: FormData) {
         return { success: false, error: validation.error.format() }
     }
 
-    // Fetch all participants to check for duplicates
-    const { blobs } = await list({ prefix: "participants/" })
-    let existing: Participant | undefined = undefined;
-    let existingBlobKey: string | undefined = undefined;
-    for (const blob of blobs) {
-        const response = await fetch(blob.url)
-        const data = await response.json() as Participant;
-        if (data.name.trim().toLowerCase() === name.trim().toLowerCase()) {
-            existing = data;
-            existingBlobKey = blob.pathname.replace(/^\//, '');
-            break;
-        }
-    }
-
-    if (existing) {
-        // If the new bench is higher, update the existing participant
-        if ((benchKg || 0) > (existing.benchKg || 0)) {
-            const updated: Participant = {
-                ...existing,
-                benchKg,
-                runTimeSeconds,
-                gender,
-            };
-            await put(existingBlobKey!, JSON.stringify(updated), {
-                access: "public",
-                allowOverwrite: true
-            });
-            revalidatePath('/admin');
-            revalidatePath('/startlist');
-            revalidatePath('/leaderboard');
-            return { success: true, data: updated, updated: true };
-        } else {
-            // Do not add or update if the new bench is not higher
-            return { success: false, error: { message: "Lavere eller lik benkpress enn eksisterende deltaker." } };
-        }
-    }
-
-    const participant: Participant = {
-        id: crypto.randomUUID(),
+    const participant: Omit<Participant, 'id'> = {
         name,
         gender,
         benchKg,
         runTimeSeconds,
     }
-
-    await put(`participants/${participant.id}.json`, JSON.stringify(participant), {
-        access: "public",
-    })
-
+    const newParticipant = await addParticipant(participant);
     revalidatePath('/admin');
     revalidatePath('/startlist');
     revalidatePath('/leaderboard');
-
-    return { success: true, data: participant }
+    return { success: true, data: newParticipant }
 }
 
 export async function handleUpdateParticipant(id: string, formData: FormData) {
@@ -138,28 +84,15 @@ export async function handleUpdateParticipant(id: string, formData: FormData) {
         return { success: false, error: validation.error.format() }
     }
 
-    const participant: Participant = {
-        id,
-        name,
-        gender,
-        benchKg,
-        runTimeSeconds,
-    }
-
-    await put(`participants/${id}.json`, JSON.stringify(participant), {
-        access: "public",
-        allowOverwrite: true
-    })
-
+    const updated = await updateParticipant(id, { name, gender, benchKg, runTimeSeconds });
     revalidatePath('/admin');
     revalidatePath('/startlist');
     revalidatePath('/leaderboard');
-
-    return { success: true, data: participant }
+    return { success: true, data: updated }
 }
 
 export async function handleDeleteParticipant(id: string) {
-    await del(`participants/${id}.json`)
+    await deleteParticipant(id);
     revalidatePath('/admin');
     revalidatePath('/startlist');
     revalidatePath('/leaderboard');
