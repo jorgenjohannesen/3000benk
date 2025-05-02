@@ -25,6 +25,8 @@ export default function AdminPage() {
   });
   const [runMinutes, setRunMinutes] = useState('');
   const [runSeconds, setRunSeconds] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [participantToDelete, setParticipantToDelete] = useState<Participant | null>(null);
 
   useEffect(() => {
     loadParticipants();
@@ -113,9 +115,15 @@ export default function AdminPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Er du sikker på at du vil slette denne deltakeren?')) {
+    const participant = participants.find(p => p.id === id) || null;
+    setParticipantToDelete(participant);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (participantToDelete) {
       try {
-        const result = await handleDeleteParticipant(id);
+        const result = await handleDeleteParticipant(participantToDelete.id);
         if (result.success) {
           loadParticipants();
         } else {
@@ -125,6 +133,13 @@ export default function AdminPage() {
         console.error('Kunne ikke slette deltaker:', error);
       }
     }
+    setDeleteDialogOpen(false);
+    setParticipantToDelete(null);
+  };
+
+  const cancelDelete = () => {
+    setDeleteDialogOpen(false);
+    setParticipantToDelete(null);
   };
 
   const handleOpenEdit = (participant: Participant) => {
@@ -270,6 +285,19 @@ export default function AdminPage() {
                 </>
               )}
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Er du sikker?</DialogTitle>
+          </DialogHeader>
+          <div className="mb-4">Er du sikker på at du vil slette deltaker <span className="font-semibold">{participantToDelete?.name}</span>?</div>
+          <div className="flex gap-4 justify-end">
+            <Button variant="destructive" onClick={confirmDelete}>Slett</Button>
+            <Button variant="outline" onClick={cancelDelete}>Avbryt</Button>
           </div>
         </DialogContent>
       </Dialog>
