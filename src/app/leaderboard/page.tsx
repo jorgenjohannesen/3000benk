@@ -14,7 +14,6 @@ type SortField = keyof Participant | 'score';
 export default function LeaderboardPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
-  const [genderFilter, setGenderFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField>('score');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
@@ -54,8 +53,35 @@ export default function LeaderboardPage() {
     (p) => p.benchKg !== null && p.benchKg !== undefined && p.runTimeSeconds !== null && p.runTimeSeconds !== undefined
   );
 
-  const filteredAndSortedParticipants = filteredParticipants
-    .filter(participant => genderFilter === 'all' || participant.gender === genderFilter)
+  const womenParticipants = filteredParticipants
+    .filter(participant => participant.gender === 'female')
+    .map(participant => ({
+      ...participant,
+      score: calculateScore(participant)
+    }))
+    .sort((a, b) => {
+      if (sortField === 'score') {
+        return sortDirection === 'asc' ? a.score - b.score : b.score - a.score;
+      }
+      const aValue = a[sortField];
+      const bValue = b[sortField];
+      
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
+      
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortDirection === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+      
+      return sortDirection === 'asc'
+        ? (aValue as number) - (bValue as number)
+        : (bValue as number) - (aValue as number);
+    });
+
+  const openClassParticipants = filteredParticipants
+    .filter(participant => participant.gender !== 'female')
     .map(participant => ({
       ...participant,
       score: calculateScore(participant)
@@ -100,22 +126,6 @@ export default function LeaderboardPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Resultatliste</h1>
         <div className="flex gap-4">
-          <Select value={genderFilter} onValueChange={setGenderFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filtrer på kjønn" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Alle kjønn</SelectItem>
-              <SelectItem value="male">Menn</SelectItem>
-              <SelectItem value="female">Kvinner</SelectItem>
-              <SelectItem value="other">Annet</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="mb-4">
-        <div className="flex gap-4">
           <Button 
             variant="outline" 
             onClick={() => handleSort('name')}
@@ -147,7 +157,16 @@ export default function LeaderboardPage() {
         </div>
       </div>
 
-      <DataTable columns={columns} data={filteredAndSortedParticipants} />
+      <div className="space-y-8">
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Kvinneklasse</h2>
+          <DataTable columns={columns} data={womenParticipants} />
+        </div>
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Åpen klasse</h2>
+          <DataTable columns={columns} data={openClassParticipants} />
+        </div>
+      </div>
     </div>
   );
 } 

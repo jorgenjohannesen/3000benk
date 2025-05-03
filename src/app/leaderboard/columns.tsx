@@ -29,7 +29,7 @@ export function createColumns(): ColumnDef<Participant & { score: number }>[] {
       cell: ({ row }) => {
         const gender = row.getValue("gender") as string;
         const genderMap: { [key: string]: string } = {
-          male: "Mann",
+          male: "Åpen klasse",
           female: "Kvinne",
           other: "Annet"
         };

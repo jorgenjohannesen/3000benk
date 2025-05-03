@@ -16,10 +16,57 @@ import Confetti from 'react-confetti';
 
 type SortField = keyof Participant | 'score';
 
+interface Champion {
+  name: string;
+  score: number;
+}
+
 export default function HomePage() {
   const [showConfetti, setShowConfetti] = useState(true);
   const [showPopup, setShowPopup] = useState(true);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [womenChampion, setWomenChampion] = useState<Champion | null>(null);
+  const [openClassChampion, setOpenClassChampion] = useState<Champion | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadChampions() {
+      try {
+        const response = await fetch('/api/participants');
+        if (!response.ok) throw new Error('Failed to fetch participants');
+        const participants = await response.json();
+
+        // Filter and calculate scores
+        const participantsWithScores = participants
+          .filter((p: Participant) => p.benchKg !== null && p.benchKg !== undefined && p.runTimeSeconds !== null && p.runTimeSeconds !== undefined)
+          .map((p: Participant) => ({
+            ...p,
+            score: (p.runTimeSeconds || 0) - (p.benchKg || 0) * 3
+          }));
+
+        // Find women champion
+        const womenParticipants = participantsWithScores.filter((p: Participant) => p.gender === 'female');
+        const womenChamp = womenParticipants.length > 0 
+          ? womenParticipants.reduce((prev: any, current: any) => (prev.score < current.score ? prev : current))
+          : null;
+
+        // Find open class champion
+        const openClassParticipants = participantsWithScores.filter((p: Participant) => p.gender !== 'female');
+        const openClassChamp = openClassParticipants.length > 0
+          ? openClassParticipants.reduce((prev: any, current: any) => (prev.score < current.score ? prev : current))
+          : null;
+
+        setWomenChampion(womenChamp);
+        setOpenClassChampion(openClassChamp);
+      } catch (error) {
+        console.error('Error loading champions:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadChampions();
+  }, []);
 
   useEffect(() => {
     // Set window size on client only
@@ -65,10 +112,29 @@ export default function HomePage() {
               <p className="text-xl text-white/90 mb-6">
                 Den ultimate testen av styrke og utholdenhet
               </p>
-              <div className="bg-yellow-100/90 border-l-4 border-yellow-500 p-4 mb-8">
-                <p className="text-yellow-700">
-                  <span className="font-semibold">Regjerende Mester:</span> Erlend Aanesland Dahle
-                </p>
+              <div className="space-y-4 mb-8">
+                {loading ? (
+                  <div className="bg-yellow-100/90 border-l-4 border-yellow-500 p-4">
+                    <p className="text-yellow-700">Laster regjerende mestere...</p>
+                  </div>
+                ) : (
+                  <>
+                    {womenChampion && (
+                      <div className="bg-yellow-100/90 border-l-4 border-yellow-500 p-4">
+                        <p className="text-yellow-700">
+                          <span className="font-semibold">Regjerende Mester Kvinneklasse:</span> {womenChampion.name}
+                        </p>
+                      </div>
+                    )}
+                    {openClassChampion && (
+                      <div className="bg-yellow-100/90 border-l-4 border-yellow-500 p-4">
+                        <p className="text-yellow-700">
+                          <span className="font-semibold">Regjerende Mester Åpen klasse:</span> {openClassChampion.name}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
               <Countdown />
             </div>
