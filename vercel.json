@@ -1,0 +1,8 @@
+{
+  "kv": {
+    "participants": {
+      "type": "kv",
+      "description": "Store for participants data"
+    }
+  }
+} 

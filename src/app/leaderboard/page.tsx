@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { Participant } from '@/lib/data';
-import { getParticipantsWithSort } from '@/lib/actions';
 import { formatTime } from '@/lib/utils';
 import { DataTable } from "@/components/ui/data-table"
 import { createColumns } from "./columns"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner";
 
 type SortField = keyof Participant | 'score';
 
@@ -16,15 +16,18 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [genderFilter, setGenderFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField>('score');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
     async function loadParticipants() {
       try {
-        const data = await getParticipantsWithSort();
+        const response = await fetch('/api/participants');
+        if (!response.ok) throw new Error('Failed to fetch participants');
+        const data = await response.json();
         setParticipants(data);
       } catch (error) {
         console.error('Kunne ikke laste deltakere:', error);
+        toast.error('Kunne ikke laste deltakere');
       } finally {
         setLoading(false);
       }
@@ -38,13 +41,13 @@ export default function LeaderboardPage() {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
-      setSortDirection('desc');
+      setSortDirection('asc');
     }
   };
 
   const calculateScore = (participant: Participant) => {
     if (!participant.benchKg || !participant.runTimeSeconds) return 0;
-    return participant.benchKg * 1000 / participant.runTimeSeconds;
+    return participant.runTimeSeconds - participant.benchKg*3;
   };
 
   const filteredParticipants = participants.filter(

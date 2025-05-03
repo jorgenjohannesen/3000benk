@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { Participant } from '@/lib/data';
-import { getParticipantsWithSort } from '@/lib/actions';
 import { DataTable } from "@/components/ui/data-table"
 import { Row } from "@tanstack/react-table"
+import { toast } from "sonner";
 
 const columns = [
   {
@@ -46,10 +46,13 @@ export default function StartingTimesPage() {
   useEffect(() => {
     async function loadParticipants() {
       try {
-        const data = await getParticipantsWithSort();
+        const response = await fetch('/api/participants');
+        if (!response.ok) throw new Error('Failed to fetch participants');
+        const data = await response.json();
         setParticipants(data);
       } catch (error) {
         console.error('Kunne ikke laste deltakere:', error);
+        toast.error('Kunne ikke laste deltakere');
       } finally {
         setLoading(false);
       }

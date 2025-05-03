@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Participant } from '@/lib/data';
-import { getParticipantsWithSort, handleAddParticipant, handleUpdateParticipant, handleDeleteParticipant } from '@/lib/actions';
 import { DataTable } from "@/components/ui/data-table"
 import { createColumns } from "./columns"
 import { Button } from "@/components/ui/button"
@@ -46,10 +45,13 @@ export default function AdminPage() {
 
   async function loadParticipants() {
     try {
-      const data = await getParticipantsWithSort();
+      const response = await fetch('/api/participants');
+      if (!response.ok) throw new Error('Failed to fetch participants');
+      const data = await response.json();
       setParticipants(data);
     } catch (error) {
       console.error('Kunne ikke laste deltakere:', error);
+      toast.error('Kunne ikke laste deltakere');
     } finally {
       setLoading(false);
     }
@@ -57,64 +59,80 @@ export default function AdminPage() {
 
   const handleAdd = async () => {
     if (!newParticipant.name) {
-      alert('Vennligst fyll ut alle påkrevde felt');
+      toast.error('Vennligst fyll ut alle påkrevde felt');
       return;
     }
     const totalSeconds = (parseInt(runMinutes) || 0) * 60 + (parseInt(runSeconds) || 0);
-    const formData = new FormData();
-    formData.append('name', newParticipant.name);
-    formData.append('gender', newParticipant.gender || 'male');
-    if (newParticipant.benchKg !== null && newParticipant.benchKg !== undefined) formData.append('benchKg', newParticipant.benchKg.toString());
-    if (totalSeconds > 0) formData.append('runTimeSeconds', totalSeconds.toString());
+    const participantData = {
+      name: newParticipant.name,
+      gender: newParticipant.gender || 'male',
+      benchKg: newParticipant.benchKg,
+      runTimeSeconds: totalSeconds > 0 ? totalSeconds : null
+    };
     
     try {
-      const result = await handleAddParticipant(formData);
-      if (result.success) {
-        setNewParticipant({
-          name: '',
-          gender: 'male',
-          benchKg: null,
-          runTimeSeconds: null
-        });
-        setRunMinutes('');
-        setRunSeconds('');
-        setIsDialogOpen(false);
-        loadParticipants();
-        toast.success('Deltaker lagt til!');
-      } else {
-        alert('Kunne ikke legge til deltaker: ' + JSON.stringify(result.error));
+      const response = await fetch('/api/participants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(participantData)
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to add participant');
       }
+
+      setNewParticipant({
+        name: '',
+        gender: 'male',
+        benchKg: null,
+        runTimeSeconds: null
+      });
+      setRunMinutes('');
+      setRunSeconds('');
+      setIsDialogOpen(false);
+      loadParticipants();
+      toast.success('Deltaker lagt til!');
     } catch (error) {
       console.error('Kunne ikke legge til deltaker:', error);
+      toast.error('Kunne ikke legge til deltaker');
     }
   };
 
   const handleEdit = async () => {
     if (!editingParticipant?.name) {
-      alert('Vennligst fyll ut alle påkrevde felt');
+      toast.error('Vennligst fyll ut alle påkrevde felt');
       return;
     }
     const totalSeconds = (parseInt(runMinutes) || 0) * 60 + (parseInt(runSeconds) || 0);
-    const formData = new FormData();
-    formData.append('name', editingParticipant.name);
-    formData.append('gender', editingParticipant.gender);
-    if (editingParticipant.benchKg !== null && editingParticipant.benchKg !== undefined) formData.append('benchKg', editingParticipant.benchKg.toString());
-    if (totalSeconds > 0) formData.append('runTimeSeconds', totalSeconds.toString());
+    const participantData = {
+      name: editingParticipant.name,
+      gender: editingParticipant.gender,
+      benchKg: editingParticipant.benchKg,
+      runTimeSeconds: totalSeconds > 0 ? totalSeconds : null
+    };
     
     try {
-      const result = await handleUpdateParticipant(editingParticipant.id, formData);
-      if (result.success) {
-        setEditingParticipant(null);
-        setRunMinutes('');
-        setRunSeconds('');
-        setIsDialogOpen(false);
-        loadParticipants();
-        toast.success('Deltaker oppdatert!');
-      } else {
-        alert('Kunne ikke oppdatere deltaker: ' + JSON.stringify(result.error));
+      const response = await fetch(`/api/participants/${editingParticipant.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(participantData)
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update participant');
       }
+
+      setEditingParticipant(null);
+      setRunMinutes('');
+      setRunSeconds('');
+      setIsDialogOpen(false);
+      loadParticipants();
+      toast.success('Deltaker oppdatert!');
     } catch (error) {
       console.error('Kunne ikke oppdatere deltaker:', error);
+      toast.error('Kunne ikke oppdatere deltaker');
     }
   };
 
@@ -127,15 +145,19 @@ export default function AdminPage() {
   const confirmDelete = async () => {
     if (participantToDelete) {
       try {
-        const result = await handleDeleteParticipant(participantToDelete.id);
-        if (result.success) {
-          loadParticipants();
-          toast.success('Deltaker slettet!');
-        } else {
-          alert('Kunne ikke slette deltaker');
+        const response = await fetch(`/api/participants/${participantToDelete.id}`, {
+          method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to delete participant');
         }
+
+        loadParticipants();
+        toast.success('Deltaker slettet!');
       } catch (error) {
         console.error('Kunne ikke slette deltaker:', error);
+        toast.error('Kunne ikke slette deltaker');
       }
     }
     setDeleteDialogOpen(false);

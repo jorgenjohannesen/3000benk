@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { handleAddParticipant } from '@/lib/actions';
+import { toast } from "sonner";
 
 interface CSVRow {
   name: string;
@@ -47,27 +47,40 @@ export function CSVUpload({ onUploadComplete }: CSVUploadProps) {
           name,
           gender: gender.toLowerCase(),
           benchKg: parseFloat(benchKg),
-          runTimeSeconds: 0
+          runTimeSeconds: null
         };
 
-        const formData = new FormData();
-        Object.entries(participantData).forEach(([key, value]) => {
-          formData.append(key, value?.toString() || '');
-        });
+        try {
+          const response = await fetch('/api/participants', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(participantData)
+          });
 
-        const result = await handleAddParticipant(formData);
-        if (result.success) {
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to add participant');
+          }
+
           successCount++;
-        } else {
+        } catch (error) {
+          console.error('Failed to add participant:', error);
           errorCount++;
         }
       }
 
       setStatus(`${successCount} deltakere lagt til, ${errorCount} feil.`);
+      if (errorCount > 0) {
+        toast.error(`${errorCount} deltakere kunne ikke legges til`);
+      }
+      if (successCount > 0) {
+        toast.success(`${successCount} deltakere lagt til`);
+      }
       await onUploadComplete();
     } catch (error) {
       console.error('Feil ved behandling av CSV-fil:', error);
       setStatus('Det oppstod en feil ved behandling av filen.');
+      toast.error('Det oppstod en feil ved behandling av filen');
     } finally {
       setIsProcessing(false);
     }

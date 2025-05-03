@@ -1,60 +1,89 @@
-import { promises as fs } from 'fs';
-import path from 'path';
-
-const DATA_PATH = path.join(process.cwd(), 'data', 'participants.json');
+import { prisma } from './prisma';
 
 export interface Participant {
   id: string;
   name: string;
   gender: 'male' | 'female' | 'other';
-  benchKg: number | null; // allow float
-  runTimeSeconds: number | null; // Store run time in seconds
+  benchKg: number | null;
+  runTimeSeconds: number | null;
 }
 
 export async function getParticipants(): Promise<Participant[]> {
   try {
-    const data = await fs.readFile(DATA_PATH, 'utf-8');
-    return JSON.parse(data) as Participant[];
+    const participants = await prisma.participant.findMany({
+      orderBy: [
+        { benchKg: 'desc' },
+        { name: 'asc' }
+      ]
+    });
+    return participants.map((p: { id: string; name: string; gender: string; benchKg: number | null; runTimeSeconds: number | null }) => ({
+      id: p.id,
+      name: p.name,
+      gender: p.gender as 'male' | 'female' | 'other',
+      benchKg: p.benchKg,
+      runTimeSeconds: p.runTimeSeconds
+    }));
   } catch (err) {
-    // If file doesn't exist, return empty array
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return [];
+    console.error('Error reading participants:', err);
+    return [];
+  }
+}
+
+export async function addParticipant(participantData: Omit<Participant, 'id'>): Promise<Participant> {
+  try {
+    const newParticipant = await prisma.participant.create({
+      data: {
+        id: crypto.randomUUID(),
+        name: participantData.name,
+        gender: participantData.gender,
+        benchKg: participantData.benchKg,
+        runTimeSeconds: participantData.runTimeSeconds
+      }
+    });
+    return {
+      id: newParticipant.id,
+      name: newParticipant.name,
+      gender: newParticipant.gender as 'male' | 'female' | 'other',
+      benchKg: newParticipant.benchKg,
+      runTimeSeconds: newParticipant.runTimeSeconds
+    };
+  } catch (err) {
+    console.error('Error adding participant:', err);
     throw err;
   }
 }
 
-export async function saveParticipants(participants: Participant[]): Promise<void> {
-  await fs.writeFile(DATA_PATH, JSON.stringify(participants, null, 2), 'utf-8');
-}
-
-export async function addParticipant(participantData: Omit<Participant, 'id'>): Promise<Participant> {
-  const participants = await getParticipants();
-  const newParticipant: Participant = {
-    ...participantData,
-    id: crypto.randomUUID(),
-  };
-  participants.push(newParticipant);
-  await saveParticipants(participants);
-  return newParticipant;
-}
-
 export async function updateParticipant(id: string, data: Partial<Pick<Participant, 'name' | 'benchKg' | 'runTimeSeconds' | 'gender'>>): Promise<Participant | null> {
-  const participants = await getParticipants();
-  let updatedParticipant: Participant | null = null;
-  const updatedParticipants = participants.map(p => {
-    if (p.id === id) {
-      updatedParticipant = { ...p, ...data };
-      return updatedParticipant;
-    }
-    return p;
-  });
-  if (updatedParticipant) {
-    await saveParticipants(updatedParticipants);
+  try {
+    const updatedParticipant = await prisma.participant.update({
+      where: { id },
+      data: {
+        name: data.name,
+        gender: data.gender,
+        benchKg: data.benchKg,
+        runTimeSeconds: data.runTimeSeconds
+      }
+    });
+    return {
+      id: updatedParticipant.id,
+      name: updatedParticipant.name,
+      gender: updatedParticipant.gender as 'male' | 'female' | 'other',
+      benchKg: updatedParticipant.benchKg,
+      runTimeSeconds: updatedParticipant.runTimeSeconds
+    };
+  } catch (err) {
+    console.error('Error updating participant:', err);
+    return null;
   }
-  return updatedParticipant;
 }
 
 export async function deleteParticipant(id: string): Promise<void> {
-  const participants = await getParticipants();
-  const updatedParticipants = participants.filter(p => p.id !== id);
-  await saveParticipants(updatedParticipants);
+  try {
+    await prisma.participant.delete({
+      where: { id }
+    });
+  } catch (err) {
+    console.error('Error deleting participant:', err);
+    throw err;
+  }
 } 
