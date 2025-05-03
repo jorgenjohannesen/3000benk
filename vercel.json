@@ -1,8 +1,9 @@
 {
-  "kv": {
-    "participants": {
-      "type": "kv",
-      "description": "Store for participants data"
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
     }
-  }
+  ]
 } 
